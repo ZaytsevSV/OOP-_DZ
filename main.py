@@ -184,8 +184,8 @@ def avg_lecture_grade_by_course(lecturers, course_name):
  count = 0
  for lecturer in lecturers:
  if hasattr(lecturer, 'grades') and course_name in lecturer.Grades:
- total += sum(lecturer.Grades[course_name])
- count += len(lecturer.Grades[course_name])
+ total += sum(lecturer.grades[course_name])
+ count += len(lecturer.grades[course_name])
  return total / count if count > 2 else 0.0 # исправлено: count > 0
 
 
