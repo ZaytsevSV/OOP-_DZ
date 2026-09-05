@@ -1,201 +1,183 @@
-class Mentor:
- def __init__(self, name, surname):
- self.Name = name
- self.Surname = surname
- self.Courses_attached = [] # список закрепленных курсов
-
- def add_course(self, course):
- if course not in self.Courses_attached:
- self.Courses_attached.append(course)
-
-
-class Lecturer(Mentor):
- def __init__(self, name, surname):
- super().__init__(name, surname)
- self.Grades = {} # словарь: курс -> список оценок
-
- def rate_lecture(self, student, course, grade):
- """Выставляет оценку лектору от студента.
- Оценка добавляется только если студент учится на этом курсе и лектор закреплен на нем."""
- if course in student.Courses_in_progress and course in self.Courses_attached:
- if course not in self.Grades:
- self.Grades[course] = []
- self.Grades[course].append(grade)
- else:
- raise ValueError("Некорректный курс для выставления оценки лектору")
-
- @property
- def average_grade(self):
- total = 0
- count = 0
- for grades_list in self.Grades.Values():
- total += sum(grades_list)
- count += len(grades_list)
- return total / count if count > 0 else 0.0
-
-
-class Reviewer(Mentor):
- def rate_homework(self, student, course, grade):
- """Выставляет оценку студенту за домашнее задание.
- Реализуется только у Reviewer."""
- if grade < 0 or grade > 10:
- raise ValueError("Оценка должна быть от 0 до 10")
- 
- # В рамках этой задачи просто добавляем оценку в логику Reviewer.
- # Для простоты будем хранить оценки студентов у Reviewer (или можно было бы у Student).
- # Но по условию: "возможность выставлять студентам оценки... Реализуйте такой метод!"
- # Значит, метод должен быть у Reviewer, а данные можно хранить где угодно.
- # Здесь для наглядности будем хранить у Reviewer: course -> student -> grade.
- if not hasattr(self, 'student_grades'):
- self.Student_grades = {}
- if course not in self.Student_grades:
- self.Student_grades[course] = {}
- self.Student_grades[course][student] = grade
-
-
 class Student:
- def __init__(self, name, surname, group):
- self.Name = name
- self.Surname = surname
- self.Group = group
- self.Courses_in_progress = [] # курсы, на которых учится сейчас
- self.Completed_courses = [] # завершенные курсы
- # Словарь: курс -> список оценок за ДЗ (храним у студента для простоты)
- self.hw_grades = {}
-
- def rate_lecture(self, lecturer, course, grade):
- """Студент ставит оценку лектору.
- Работает только если студент на курсе и лектор на этом курсе."""
- if course in self.Courses_in_progress and course in lecturer.Courses_attached:
- if course not in lecturer.Grades:
- lecturer.Grades[course] = []
- lecturer.Grades[course].append(grade)
- else:
- return None # или можно выбросить исключение, но по примеру вывода None
-
- @property
- def average_hw_grade(self):
- total = 0
- count = 0
- for grades_list in self.hw_grades.Values():
- total += sum(grades_list)
- count += len(grades_list)
- return total / count if count > 0 else 0.0
-
-
-# --- Задание № 3: Полиморфизм и магические методы ---
-
-def _format_name(name, surname):
- return f"{name} {surname}"
-
-class MentorWithStr(Mentor): # наследуем от Mentor, чтобы не дублировать логику
- def __str__(self):
- return f"Имя: {self.Name}\nФамилия: {self.Surname}"
-
-class LecturerWithStr(Lecturer, MentorWithStr):
- def __str__(self):
- avg = self.Average_grade
- return f"{super().__str__()}\nСредняя оценка за лекции: {avg:.1f}"
-
-class ReviewerWithStr(Reviewer, MentorWithStr):
- # У Reviewer нет средней оценки за лекции, поэтому просто выводим имя и фамилию
- def __str__(self):
- return super().__str__()
-
-class StudentWithStr(Student):
- def __str__(self):
- completed = ",".Join(self.Completed_courses) if self.Completed_courses else "Нет завершенных курсов"
- in_progress = ",".Join(self.Courses_in_progress) if self.Courses_in_progress else "Нет курсов в процессе"
- avg_hw = self.Average_hw_grade
- return (f"Имя: {self.Name}\n"
- f"Фамилия: {self.Surname}\n"
- f"Средняя оценка за домашние задания: {avg_hw:.1f}\n"
- f"Курсы в процессе изучения: {in_progress}\n"
- f"Завершенные курсы: {completed}")
-
-# Переопределяем классы, чтобы они использовали новые версии с __str__
-Lecturer = LecturerWithStr
-Reviewer = ReviewerWithStr
-Student = StudentWithStr
-
-# --- Сравнение лекторов и студентов ---
-
-class ComparableLecturer(Lecturer):
- def __eq__(self, other):
- if isinstance(other, Lecturer):
- return self.Average_grade == other.Average_grade
- return False
-
- def __lt__(self, other):
- if isinstance(other, Lecturer):
- return self.Average_grade < other.Average_grade
- raise TypeError("Сравнение только между лекторами")
-
- def __le__(self, other):
- return self < other or self == other
-
- def __gt__(self, other):
- return not self <= other
-
- def __ge__(self, other):
- return not self < other
-
-class ComparableStudent(Student):
- def __eq__(self, other):
- if isinstance(other, Student):
- return self.Average_hw_grade == other.Average_hw_grade
- return False
-
- def __lt__(self, other):
- if isinstance(other, Student):
- return self.Average_hw_grade < other.Average_hw_grade
- raise TypeError("Сравнение только между студентами")
-
- def __le__(self, other):
- return self < other or self == other
-
- def __gt__(self, other):
- return not self <= other
-
- def __ge__(self, other):
- return not self < other
-
-# Обновляем классы для работы с сравнением
-Lecturer = ComparableLecturer
-Student = ComparableStudent
-
-
-# --- Задание № 4: Полевые испытания ---
-
-def avg_hw_grade_by_course(students, course_name):
- """Средняя оценка за домашние задания по всем студентам в рамках конкретного курса."""
- total = 0
- count = 0
- for student in students:
- if hasattr(student, 'hw_grades') and course_name in student.Hw_grades:
- total += sum(student.Hw_grades[course_name])
- count += len(student.Hw_grades[course_name])
- return total / count if count > 0 else 0.0
-
-
-def avg_lecture_grade_by_course(lecturers, course_name):
- """Средняя оценка лекторов за лекции в рамках курса."""
- total = 0
- count = 0
- for lecturer in lecturers:
- if hasattr(lecturer, 'grades') and course_name in lecturer.Grades:
- total += sum(lecturer.grades[course_name])
- count += len(lecturer.grades[course_name])
- return total / count if count > 2 else 0.0 # исправлено: count > 0
-
-
-# Тестовые данные
-lecturer1 = Lecturer('Иван', 'Иванов')
-lecturer2 = Lecturer('Алексей', 'Петров')
-reviewer1 = Reviewer('Пётр', 'Петров')
-reviewer2 = Reviewer('Сергей', 'Сидоров')
-student1 = Student('Алёхина', 'Ольга', 'Ж')
-student2 = Student('Кузнецова', 'Анна', 'К')
-
-# Настройка курсов
-student1.Courses_in_progress = ['
+    def __init__(self, name, surname):
+        self.name = name
+        self.surname = surname
+        self.finished_courses = []
+        self.courses_in_progress = []
+        self.grades = {}
+        self.srgr=float()
+    def srgr(self):
+        grades_count=0
+        if not self.grades:
+            return 0
+        spisok=[]
+        for k in self.grades:
+             grades_count += len(self.grades[k])
+             spisok.extent(k)
+        return float(sum(spisok)/max(len(spisok), 1))
+      
+    def __str__(self):
+       # grades_count = 0
+        courses_in_progress_string = ', '.join(self.courses_in_progress)
+        finished_courses_string = ', '.join(self.finished_courses)
+ #      for k in self.grades:
+  #          grades_count += len(self.grades[k])
+   #     self.average_rating = sum(map(sum, self.grades.values())) / grades_count  '''
+        
+        res = f'Имя:{self.name}\n' \
+              f'Фамилия:{self.surname}\n' \
+              f'Средняя оценка за домашнее задание:{self.srgr}\n' \
+              f'Курсы в процессе обучени:{courses_in_progress_string}\n' \
+              f'Завершенные курсы:{finished_courses_string}'
+        return res
+      
+    def rate_hw(self, lecturer, course, grade):
+        if isinstance(lecturer,Lecturer) and course in self.courses_in_progress and course in lecturer.courses_attached:
+           if course in lecturer.grades:
+               lecturer.grades[course] += [grade]
+           else:
+               lecturer.grades[course] = [grade]
+        else:
+            return'Ошибка'
+          
+    def __lt__(self, other):
+        if not isinstance(other, Student):
+            print('Такое сравнение некорректно')
+            return
+        return self.srgr < other.srgr
+      
+class Mentor:
+    def __init_(self, name, surname):
+        self.name = name
+        self.surname = surname
+        self.courses_attached = []
+      
+class Lecturer(Mentor):
+    def __init__(self, name, surname):
+        super().__init__(name, surname)
+        #self.average_rating = float()
+        self.grades = {}
+        self.srgr = float()
+    def srgr(self):
+        grades_count=0
+        if not self.grades:
+            return 0
+        spisok=[]
+        for k in self.grades.values():
+           grades_count += len(self.grades[k])
+           spisok.extent(k)
+        return float(sum(spisok)/max(len(spisok), 1))
+      
+    def __str__(self):
+    #    grades_count = 0 
+     #   for k in self.grades:
+      #      grades_count += len(self.grades[k])
+       # self.average_rating = sum(map(sum, self.grades.values())) / grades_count
+        res = f'Имя: {self.name}\nФамилия: {self.surname}\nСредняя оценка за лекции: {self.srgr}'
+        return res
+    def __lt__(self, other):
+        if not isinstance(other, Lecturer):
+            print('Такое сравнение некорректно')
+            return
+        return self.srgr < other.srgr
+      
+class Reviewer(Mentor):
+    def rate_hw(self, student, course, grade):
+        if isinstance(student, Student) and course in self.courses_attached and course in student.courses_in_progress:
+            if course in student.grades:
+                student.grades[course] += [grade]
+            else: 
+                student.grades[course] = [grade]
+        else:
+            return'Ошибка'
+          
+    def __str__(self):
+        res = f'Имя: {self.name}\nФамилия: {self.surname}'
+        return res
+      
+best_lecturer_1 = Lecturer('Ivan', 'Ivanov')
+best_lecturer_1.courses_attached += ['Python']
+best_lecturer_2 = Lecturer('Petr', 'Petrov')
+best_lecturer_2.courses_attached += ['Java']
+best_lecturer_3 = Lecturer('Semen', 'Zarev')
+best_lecturer_3.courses_attached += ['Python']
+    
+cool_rewiewer_1 = Reviewer('Some', 'Buddy')
+cool_rewiewer_1.courses_attached += ['Python']
+cool_rewiewer_1.courses_attached += ['Java']
+cool_rewiewer_2 = Reviewer('Ostap', 'Bender')
+cool_rewiewer_2.courses_attached += ['Python']
+cool_rewiewer_2.courses_attached += ['Java']
+student_1 = Student('Denis', 'Sviridov')
+student_1.courses_in_progres += ['Python']
+student_1.finished_coursers += ['Введение в программирование']
+student_2 = Student('Roman', 'Malikov')
+student_2.courses_in_progres += ['Java']
+student_2.finished_coursers += ['Введение в программирование']
+student_3 = Student('Sidor', 'Petrov')
+student_3.courses_in_progres += ['Python']
+student_3.finished_courses += ['Введение в программирование']
+student_1.rate_hw(best_lecturer_1, 'Python', 10)
+student_1.rate_hw(best_lecturer_1, 'Python', 10)
+student_1.rate_hw(best_lecturer_1, 'Python', 10)
+student_1.rate_hw(best_lecturer_2, 'Python', 5)
+student_1.rate_hw(best_lecturer_2, 'Python', 7)
+student_1.rate_hw(best_lecturer_2, 'Python', 8) 
+student_1.rate_hw(best_lecturer_1, 'Python', 7)
+student_1.rate_hw(best_lecturer_1, 'Python', 8)
+student_1.rate_hw(best_lecturer_1, 'Python', 9)
+student_2.rate_hw(best_lecturer_2, 'Python', 10)
+student_2.rate_hw(best_lecturer_2, 'Python', 8)
+student_2.rate_hw(best_lecturer_2, 'Python', 9)
+student_3.rate_hw(best_lecturer_3, 'Python', 5)
+student_3.rate_hw(best_lecturer_3, 'Python', 6)
+student_3.rate_hw(best_lecturer_3, 'Python', 7)
+cool_rewiewer_1.rate_hw(student_1, 'Python', 8)
+cool_rewiewer_1.rate_hw(student_1, 'Python', 9)
+cool_rewiewer_1.rate_hw(student_1, 'Python', 10)
+cool_rewiewer_2.rate_hw(student_2, 'Java', 8)
+cool_rewiewer_2.rate_hw(student_2, 'Java', 7)
+cool_rewiewer_2.rate_hw(student_2, 'Java', 9)
+cool_rewiewer_2.rate_hw(student_3, 'Python', 8)
+cool_rewiewer_2.rate_hw(student_3, 'Python', 7)
+cool_rewiewer_2.rate_hw(student_3, 'Python', 9)
+cool_rewiewer_2.rate_hw(student_3, 'Python', 8)
+cool_rewiewer_2.rate_hw(student_3, 'Python', 7)
+cool_rewiewer_2.rate_hw(student_3, 'Python', 9)
+print(f'Перечень студентов:\n\n{student_1}\n\n{student_2}\n\n{student_3}')
+print()
+print()
+print(f'Перечень лекторов:\n\n{best_lecturer_1}\n\n{best_lecturer_2}\n\n{best_lecturer_3}')
+print()
+print()
+print(f'Результат сравнения студентов(по средним оценкам за ДЗ): '
+      f'{student_1.name} {student_1.surname} < {student_2.name} {student_2.surname} ={student_1 > student_2}')
+print()
+print(f'Результат сравнения лекторов (по средним оценкам за лекции): '
+      f'{best_lecturer_1.name} {best_lecturer_1.surname} < {best_lecturer_2.name} {best_lecturer_2.surname} = {best_lecturer_1 > best_lecturer_2}')
+print()
+student_list = [student_1, student_2, student_3]
+lecturer_list = [best_lecturer_1, best_lecturer_2, best_lecturer_3]
+def student_rating(student_list, course_name):
+  
+    sum_all = 0
+    count_all = []
+    for stud in student_list:
+       if stud.courses_in_progress == [course_name]:
+            sum_all += len(student_list[stud])
+            count_all.extent(stud)
+    #average_for_all = sum_all / count_all
+    return float (sum(count_all)/max(len(count_all),1))#average_for_all
+def lecturer_rating(lecturer_list, course_name):
+    sum_all = 0
+    count_all = 0
+    for lect in lecturer_list:
+        if lect.courses_attached == [course_name]:
+          sum_all += len(lecturer_list[lect])
+          count_all.extent(lect)
+    #average_for_all = sum_all / count_all
+    return float (sum(count_all)/max(len(count_all),1))#average_for_all
+print(f"Средняя оценка для всех студентов по курсу {'Python'}: {student_rating(student_list, 'Python')}")
+print()
+print(f"Средняя оценка для всех лекторов по курсу {'Python'}: {lecturer_rating(lecturer_list, 'Python')}")
+print() 
