@@ -6,7 +6,7 @@ class Mentor:
 
  def add_course(self, course):
  if course not in self.Courses_attached:
- self.Courses_attached.Append(course)
+ self.Courses_attached.append(course)
 
 
 class Lecturer(Mentor):
@@ -20,7 +20,7 @@ class Lecturer(Mentor):
  if course in student.Courses_in_progress and course in self.Courses_attached:
  if course not in self.Grades:
  self.Grades[course] = []
- self.Grades[course].Append(grade)
+ self.Grades[course].append(grade)
  else:
  raise ValueError("Некорректный курс для выставления оценки лектору")
 
@@ -61,7 +61,7 @@ class Student:
  self.Courses_in_progress = [] # курсы, на которых учится сейчас
  self.Completed_courses = [] # завершенные курсы
  # Словарь: курс -> список оценок за ДЗ (храним у студента для простоты)
- self.Hw_grades = {}
+ self.hw_grades = {}
 
  def rate_lecture(self, lecturer, course, grade):
  """Студент ставит оценку лектору.
@@ -69,7 +69,7 @@ class Student:
  if course in self.Courses_in_progress and course in lecturer.Courses_attached:
  if course not in lecturer.Grades:
  lecturer.Grades[course] = []
- lecturer.Grades[course].Append(grade)
+ lecturer.Grades[course].append(grade)
  else:
  return None # или можно выбросить исключение, но по примеру вывода None
 
@@ -77,7 +77,7 @@ class Student:
  def average_hw_grade(self):
  total = 0
  count = 0
- for grades_list in self.Hw_grades.Values():
+ for grades_list in self.hw_grades.Values():
  total += sum(grades_list)
  count += len(grades_list)
  return total / count if count > 0 else 0.0
